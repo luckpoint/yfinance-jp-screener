@@ -89,6 +89,16 @@ python sumalize.py stocks_sample.json
 
 # uvを使用
 uv run sumalize.py stocks_1.json
+
+# 失敗分だけ再取得（成功済みCSVを指定）
+python sumalize.py --json stocks_all.json --retry-from Export/japanese_stocks_data_all_20260106_204710.csv
+```
+
+**再取得後の結合（任意）**:
+
+```bash
+# 同日のCSVをまとめて統合
+python combine_latest_csv.py --date 20260106
 ```
 
 **出力**:
@@ -133,6 +143,31 @@ uv run combine_latest_csv.py
 3. データを結合
 4. 重複を削除
 5. 日付付きファイル名で保存
+
+---
+
+### 5. `filter_stocks_by_yaml.py` - YAML 条件で CSV を抽出
+
+stock_search でエクスポートしたフィルター YAML を使って、CSV を検索・ソートして出力します。
+
+**使用方法**:
+
+```bash
+uv run filter_stocks_by_yaml.py \
+  --input Export/japanese_stocks_data_all_20260106_204710.csv \
+  --filters ../stock_search/export/japanese_stocks_data_all_20260106_204710_filters_20260107_1001.yaml \
+  --output Export/japanese_stocks_data_all_20260106_204710_filtered.csv
+```
+
+**出力**:
+
+- 指定した `--output` パスに CSV を保存
+
+**仕様**:
+
+- YAML 内にある条件のみを適用
+- 対象列が CSV に存在しない場合はその条件をスキップ
+- ソート条件があれば YAML に従って並び替え
 
 ---
 

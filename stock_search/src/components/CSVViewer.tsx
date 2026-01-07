@@ -7,6 +7,7 @@ import { Pagination } from "./Pagination";
 import { ColumnSelector, type ColumnConfig } from "./ColumnSelector";
 import { getDefaultColumns } from "../utils/columnConfig";
 import { DownloadButton } from "./DownloadButton";
+import { FilterExportButton } from "./FilterExportButton";
 import type { PaginationConfig } from "../types/stock";
 import { PAGINATION } from "../constants/ui";
 
@@ -251,6 +252,18 @@ export const CSVViewer = ({ file }: CSVViewerProps) => {
             />
             <span className="text-xs text-base-content/60 mt-1">
               検索結果をExcelで開けます
+            </span>
+          </div>
+
+          {/* 検索条件エクスポートボタン */}
+          <div className="flex flex-col items-start">
+            <FilterExportButton
+              filters={filters}
+              sortConfig={sortConfig}
+              baseFileName={file.name.replace(/\.[^/.]+$/, "")}
+            />
+            <span className="text-xs text-base-content/60 mt-1">
+              検索条件をYAMLで保存
             </span>
           </div>
 

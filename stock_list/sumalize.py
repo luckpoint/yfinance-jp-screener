@@ -31,6 +31,7 @@ from datetime import datetime
 import warnings
 import logging
 import requests
+import re
 
 
 warnings.filterwarnings("ignore")
@@ -158,6 +159,47 @@ def format_ticker(code):
     else:
         # 数値コードは4桁にゼロパディング
         return f"{code:04d}.T"
+
+
+def normalize_code(code):
+    """銘柄コードの表記ゆれを吸収して比較用に正規化"""
+    if code is None:
+        return None
+
+    code_str = str(code).strip()
+    if not code_str:
+        return None
+
+    if code_str.lower().endswith(".t"):
+        code_str = code_str[:-2]
+
+    if re.match(r"^\d+\.0$", code_str):
+        code_str = code_str[:-2]
+
+    return code_str.upper()
+
+
+def load_success_codes_from_csv(csv_path):
+    """成功済みCSVから銘柄コードを読み込む"""
+    try:
+        df = pd.read_csv(csv_path, dtype=str, encoding="utf-8-sig")
+    except FileNotFoundError:
+        logger.error(f"❌ CSVファイルが見つかりません: {csv_path}")
+        return set()
+    except Exception as e:
+        logger.error(f"❌ CSV読み込みエラー: {csv_path} - {e}")
+        return set()
+
+    if "銘柄コード" not in df.columns:
+        logger.error(f"❌ CSVに銘柄コード列がありません: {csv_path}")
+        return set()
+
+    codes = {
+        normalize_code(code)
+        for code in df["銘柄コード"].dropna().tolist()
+        if normalize_code(code)
+    }
+    return codes
 
 
 def safe_get_value(data, key, default=None):
@@ -621,11 +663,12 @@ def get_stock_data(stock_info):
         return None
 
 
-def main(json_filename="stocks_sample.json"):
+def main(json_filename="stocks_sample.json", retry_from_csv=None):
     """メイン処理
 
     Args:
         json_filename (str): 処理対象のJSONファイル名
+        retry_from_csv (str | None): 成功済みCSVを指定して未取得銘柄のみ再取得
     """
     overall_start_time = time.time()
     overall_start_datetime = datetime.now()
@@ -646,6 +689,25 @@ def main(json_filename="stocks_sample.json"):
     except json.JSONDecodeError:
         logger.error(f"❌ {json_filename}ファイルの形式が正しくありません")
         return None
+
+    if retry_from_csv:
+        success_codes = load_success_codes_from_csv(retry_from_csv)
+        if success_codes:
+            original_count = len(stock_list)
+            stock_list = [
+                stock
+                for stock in stock_list
+                if normalize_code(stock.get("コード")) not in success_codes
+            ]
+            logger.info(
+                f"再取得対象: {len(stock_list)}社 (成功済み: {len(success_codes)}社 / 元: {original_count}社)"
+            )
+        else:
+            logger.warning("再取得用CSVの読み込みに失敗したため全件処理します")
+
+    if not stock_list:
+        logger.info("再取得対象がありません")
+        return pd.DataFrame()
 
     logger.info("=" * 60)
     logger.info("日本株財務データ取得開始")
@@ -785,6 +847,7 @@ def parse_arguments():
   python sumalize.py                    # stocks_sample.jsonを処理（デフォルト）
   python sumalize.py stocks_1.json     # stocks_1.jsonを処理
   python sumalize.py --json stocks_2.json  # stocks_2.jsonを処理
+  python sumalize.py --json stocks_all.json --retry-from Export/japanese_stocks_data_all_20260106_204710.csv
   
 利用可能なファイル:
   stocks_1.json, stocks_2.json, stocks_3.json, stocks_4.json
@@ -806,6 +869,12 @@ def parse_arguments():
         help="処理対象のJSONファイル名（--jsonオプション）",
     )
 
+    parser.add_argument(
+        "--retry-from",
+        dest="retry_from_csv",
+        help="成功済みCSVを指定して未取得銘柄のみ再取得",
+    )
+
     return parser.parse_args()
 
 
@@ -822,7 +891,7 @@ if __name__ == "__main__":
     logger.info("=" * 60)
 
     # メイン処理実行
-    df_result = main(json_filename)
+    df_result = main(json_filename, retry_from_csv=args.retry_from_csv)
 
     logger.info("\n" + "=" * 60)
     logger.info("処理完了")

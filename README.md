@@ -123,6 +123,12 @@ uv run sumalize.py stocks_sample.json   #ダウンロードテスト用
 
 # 6. CSV結合
 uv run combine_latest_csv.py
+
+# 7. YAMLフィルタによる抽出（任意）
+uv run filter_stocks_by_yaml.py \
+  --input Export/japanese_stocks_data_all_20260106_204710.csv \
+  --filters ../stock_search/export/japanese_stocks_data_all_20260106_204710_filters_20260107_1001.yaml \
+  --output Export/japanese_stocks_data_all_20260106_204710_filtered.csv
 ```
 
 #### フロントエンド環境のセットアップ

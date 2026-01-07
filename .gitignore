@@ -9,3 +9,8 @@ node_modules
 # Generated / local data files
 stock_list/stocks_all.json
 stock_list/Export/
+
+# Local exports / binary artifacts
+stock_search/export/
+stock_list/*.xlsx
+stock_list/*.xls
